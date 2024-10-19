@@ -3,7 +3,7 @@
 @php
     $defaultBreadcrumbs = [
         trans('backpack::crud.admin') => backpack_url('dashboard'),
-        'Crawler Kho8k' => backpack_url('plugin/khophim8k-crawler'),
+        'Crawler' => backpack_url('plugin/ophim-crawler'),
     ];
 
     $breadcrumbs = $breadcrumbs ?? $defaultBreadcrumbs;
@@ -29,15 +29,16 @@
                             <label for="">Link</label>
                             <div class="form-group">
                                 <select class="custom-select col-4" name="movies-get-params">
-                                    <option value="get-page">Lấy phim theo Page</option>
-                                    <option value="get-movie">Lấy phim Đơn</option>
+                                    <option value="thumb_url-">Thiếu thumb</option>
+                                    <option value="poster_url-">Thiếu poster</option>
+                                    <option value="status-ongoing">Đang chiếu</option>
                                 </select>
-
+                                <button class="btn btn-sm btn-primary" id="movies-get-handle">Lấy danh sách</button>
                             </div>
-                            <textarea class="form-control" rows="5" name="link">https://xxvnapi.com/api/phim-moi-cap-nhat</textarea>
+                            <textarea class="form-control" rows="5" name="link">https://ophim1.com/danh-sach/phim-moi-cap-nhat</textarea>
                             <small><i>Mỗi link cách nhau 1 dòng</i></small>
                         </div>
-                        {{-- <div class="form-group col-12">
+                        <div class="form-group col-12">
                             <label class="text-danger">Loại trừ định dạng</label>
                             <button id="excluded-all-type" type="button" class="btn btn-sm btn-info">All</button>
                             <select id="excluded-type" class="form-control select2" name="excludedType[]" multiple>
@@ -46,7 +47,7 @@
                                 <option value="hoathinh">Hoạt Hình</option>
                                 <option value="tvshows">TV Shows</option>
                             </select>
-                        </div> --}}
+                        </div>
                         <div class="form-group col-12">
                             <label class="text-danger">Loại trừ thể loại</label>
                             <button id="excluded-all-category" type="button" class="btn btn-sm btn-info">All</button>
@@ -92,7 +93,7 @@
                         </div>
 
                         <div class="form-group col-6">
-                            <button class="btn btn-primary btn-load">Load Phim</button>
+                            <button class="btn btn-primary btn-load">Tải</button>
                         </div>
                     </div>
                 </div>
@@ -208,7 +209,13 @@
             $(function() {
                 $(".select2").select2();
 
-
+                $("#excluded-all-type").on("click", function() {
+                    var allType = [];
+                    if ($("#excluded-type").val().length === 0) allType = ['series', 'single', 'hoathinh',
+                        'tvshows'
+                    ];
+                    $("#excluded-type").val(allType).trigger("change");
+                });
 
                 $("#excluded-all-category").on("click", function() {
                     var allCategory = [];
@@ -227,7 +234,8 @@
             $(document).ready(function() {
                 $("input[name=from]").val(localStorage.getItem('crawler-page-from') ?? 1);
                 $("input[name=to]").val(localStorage.getItem('crawler-page-to') ?? 1);
-
+                $("#excluded-type").val(localStorage.getItem('crawler-excluded-type')?.split(",") ?? []).trigger(
+                    "change");
                 $("#excluded-category").val(localStorage.getItem('crawler-excluded-category')?.split(",") ?? [])
                     .trigger("change");
                 $("#excluded-regions").val(localStorage.getItem('crawler-excluded-regions')?.split(",") ?? []).trigger(
@@ -250,8 +258,9 @@
                 $("#excluded-category").on('change', () => {
                     localStorage.setItem('crawler-excluded-category', $("#excluded-category").val());
                 });
-
-
+                $("#excluded-type").on('change', () => {
+                    localStorage.setItem('crawler-excluded-type', $("#excluded-type").val());
+                });
                 $("#excluded-regions").on('change', () => {
                     localStorage.setItem('crawler-excluded-regions', $("#excluded-regions").val());
                 });
@@ -286,6 +295,7 @@
             const link = $('textarea[name="link"]').val();
             const from = parseInt($('input[name="from"]').val());
             const to = parseInt($('input[name="to"]').val());
+
             if (!link) {
                 $('textarea[name="link"]').addClass('is-invalid');
                 return;
@@ -294,12 +304,13 @@
 
             const fetchApi = async (link, from, to) => {
                 isFetching = true;
-                const response = await fetch("{{ backpack_url('plugin/khophim8k-crawler/fetch') }}?" +
+                const response = await fetch("{{ backpack_url('plugin/ophim-crawler/fetch') }}?" +
                     new URLSearchParams({
                         link,
                         from,
                         to
                     }));
+
                 if (response.status >= 200 && response.status < 300) {
                     return {
                         response: response,
@@ -338,8 +349,6 @@
                 $('.btn-load').html(`Đang tải...: Page ${current}/${to}`);
                 fetchApi(link, current, current).then(res => {
                     if (res.payload.length > 0) {
-                        console.log(res.payload)
-
                         listMovies = listMovies.concat(res.payload);
                         let curTotal = parseInt($('.total-movie-count').html());
                         let selectedCount = parseInt($('.selected-movie-count').html());
@@ -351,9 +360,8 @@
                 }).finally(() => {
                     crawlPages(current + 1)
                 })
-
-
             }
+
             // Nhiều link: crawl từng link
             const crawlMultiLink = (arrLink, current) => {
                 let currentLink = arrLink[current];
@@ -385,9 +393,7 @@
             $('.total-movie-count').html(0);
             $('.selected-movie-count').html(0);
             $('#movie-list').html("");
-            let params = $("select[name=movies-get-params]").find(":selected").val();
-
-            if (params=='get-movie') {
+            if (link.split("\n").length > 1) {
                 crawlMultiLink(link.split("\n"), 0)
             } else {
                 crawlPages(from);
@@ -508,7 +514,7 @@
             const excludedRegions = $("[name='excludedRegions[]']").val()
             const excludedType = $("[name='excludedType[]']").val()
             const forceUpdate = ($("[name='force_update']").prop('checked') == true) ? true : false;
-            const response = await fetch("{{ backpack_url('plugin/khophim8k-crawler/crawl') }}", {
+            const response = await fetch("{{ backpack_url('plugin/ophim-crawler/crawl') }}", {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",
@@ -537,6 +543,30 @@
             }
         }
 
+        $("#movies-get-handle").click(async function() {
+            const apiDomain = "{{ config('ophim_crawler.domain', 'https://ophim1.com') }}";
+            let params = $("select[name=movies-get-params]").find(":selected").val();
 
+            const response = await fetch("{{ backpack_url('plugin/ophim-crawler/get-movies') }}", {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                body: JSON.stringify({
+                    params: params
+                })
+            });
+
+            if (response.status >= 200 && response.status < 300) {
+                let payload = await response.json();
+                let xhtmlMovies = [];
+                for (let index = 0; index < payload.length; index++) {
+                    const movie = payload[index];
+                    xhtmlMovies.push(`${apiDomain}/phim/${movie.slug}`);
+                }
+                $("textarea[name='link']").val(xhtmlMovies.join('\n'));
+            }
+        })
     </script>
 @endsection

@@ -1,6 +1,6 @@
 <?php
 
-namespace Kho8k\Crawler\OphimCrawler;
+namespace Kho8k\Crawler\Kho8kCrawler;
 
 use Backpack\Settings\app\Models\Setting;
 use Illuminate\Support\Facades\Cache;
@@ -56,12 +56,12 @@ class Option
         $regions = [];
         try {
             $categories = Cache::remember('ophim_categories', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('ophim_crawler.domain', 'https://ophim1.com'))), true) ?? [];
+                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('ophim_crawler.domain', 'https://xxvnapi.com/'))), true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
 
             $regions = Cache::remember('ophim_regions', 86400, function () {
-                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('ophim_crawler.domain', 'https://ophim1.com'))), true) ?? [];
+                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('ophim_crawler.domain', 'https://xxvnapi.com/'))), true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
         } catch (\Throwable $th) {

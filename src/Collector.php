@@ -1,6 +1,6 @@
 <?php
 
-namespace Kho8k\Crawler\OphimCrawler;
+namespace Kho8k\Crawler\Kho8kCrawler;
 
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManagerStatic as Image;
@@ -18,8 +18,7 @@ class Collector
         $this->payload = $payload;
         $this->forceUpdate = $forceUpdate;
     }
-
-    public function get(): array
+    public function getXapi(): array
     {
         $info = $this->payload['movie'] ?? [];
         $episodes = $this->payload['movie']['episodes'] ?? [];
@@ -48,6 +47,67 @@ class Collector
         return $data;
     }
 
+
+    public function get(): array
+    {
+        $info = $this->payload['movie'] ?? [];
+        $episodes = $this->payload['episodes'] ?? [];
+
+        $data = [
+            'name' => $info['name'],
+            'origin_name' => $info['origin_name'],
+            'publish_year' => $info['year'],
+            'content' => $info['content'],
+            'type' =>  $this->getMovieType($info, $episodes),
+            'status' => $info['status'],
+            'thumb_url' => $this->getThumbImage($info['slug'], $info['thumb_url']),
+            'poster_url' => $this->getPosterImage($info['slug'], $info['poster_url']),
+            'is_copyright' => $info['is_copyright'],
+            'trailer_url' => $info['trailer_url'] ?? "",
+            'quality' => $info['quality'],
+            'language' => $info['lang'],
+            'episode_time' => $info['time'],
+            'episode_current' => $info['episode_current'],
+            'episode_total' => $info['episode_total'],
+            'notify' => $info['notify'],
+            'showtimes' => $info['showtimes'],
+            'is_shown_in_theater' => $info['chieurap'],
+        ];
+
+        return $data;
+    }
+    public function get_nguonc(): array
+    {
+        $info = $this->payload['movie'] ?? [];
+        $episodes = $this->payload['movie']['episodes'] ?? [];
+
+        $data = [
+            'name' => $info['name'],
+            'origin_name' => $info['original_name'],
+            'publish_year' => $info['category']['3']['list'][0]['name'],
+            'content' => $info['description'],
+            'type' =>  $this->getMovieTypeNguonc($info, $episodes),
+            'status' => $this->getStatusNguonc($info['current_episode']),
+            // 'status' => 'completed',
+            'thumb_url' => $this->getThumbImage($info['slug'], $info['thumb_url']),
+            'poster_url' => $this->getPosterImage($info['slug'], $info['poster_url']),
+            'is_copyright' => $info['is_copyright'] ?? false,
+            'trailer_url' => $info['trailer_url'] ?? "",
+            'quality' => $info['quality'],
+            'language' => $info['language'],
+            'episode_time' => $info['time'],
+            'episode_current' => $info['current_episode'],
+            'episode_total' => $info['total_episodes'],
+            'notify' => $info['notify'] ?? "",
+            'showtimes' => $info['showtimes'] ?? "",
+            'is_shown_in_theater' => $info['chieurap'] ?? false,
+        ];
+
+        return $data;
+    }
+// end get nguonc
+
+
     public function getThumbImage($slug, $url)
     {
         return $this->getImage(
@@ -69,8 +129,45 @@ class Collector
             Option::get('resize_poster_height')
         );
     }
+    // GetStatusNguonc
+   protected function slugify($str, $divider = '-')
+    {
+        $str = trim(mb_strtolower($str));
+        $str = preg_replace('/(à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ)/', 'a', $str);
+        $str = preg_replace('/(è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ)/', 'e', $str);
+        $str = preg_replace('/(ì|í|ị|ỉ|ĩ)/', 'i', $str);
+        $str = preg_replace('/(ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ)/', 'o', $str);
+        $str = preg_replace('/(ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ)/', 'u', $str);
+        $str = preg_replace('/(ỳ|ý|ỵ|ỷ|ỹ)/', 'y', $str);
+        $str = preg_replace('/(đ)/', 'd', $str);
+        $str = preg_replace('/[^a-z0-9-\s]/', '', $str);
+        $str = preg_replace('/([\s]+)/', $divider, $str);
+        return $str;
+    }
+    protected function getStatusNguonc($status)
+    {
+        $slugifyStatus = $this->slugify($status,'_');
+        $type = 'completed';
+        if(strpos($slugifyStatus, 'tap')!==false || strpos($slugifyStatus, 'dang')!==false) {
+            $type = 'ongoing';
+        } elseif(strpos($slugifyStatus, 'hoan')!==false || strpos($slugifyStatus, 'full')!==false) {
+            $type = 'completed';
+        }else{
+            $type = 'is_trailer';
+        };
+        return $type;
 
 
+    }
+
+
+    // Get type nguonc
+    protected function getMovieTypeNguonc($info, $episodes)
+    {
+        return $info['category']['1']['list'][0]['name'] == 'Phim bộ' ? 'series'
+            : 'single';
+    }
+    // End get type nguonc
     protected function getMovieType($info, $episodes)
     {
         return $info['type'] == 'series' ? 'series'

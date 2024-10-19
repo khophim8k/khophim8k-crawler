@@ -7,7 +7,7 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Kho8k\Crawler\Kho8kCrawler\Crawler;
+use Kho8k\Crawler\Kho8kCrawler\Crawlerkk;
 use Kho8k\Core\Models\Movie;
 
 /**
@@ -15,7 +15,7 @@ use Kho8k\Core\Models\Movie;
  * @package Kho8k\Crawler\Kho8kCrawler\Controllers
  * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
  */
-class CrawlController extends CrudController
+class CrawlkkController extends CrudController
 {
     public function fetch(Request $request)
     {
@@ -23,9 +23,10 @@ class CrawlController extends CrudController
             $data = collect();
 
             $request['link'] = preg_split('/[\n\r]+/', $request['link']);
+
             foreach ($request['link'] as $link) {
                 if (preg_match('/(.*?)(\/phim\/)(.*?)/', $link)) {
-                    $link = sprintf('%s/phim/%s', 'https://xxvnapi.com/api', explode('phim/', $link)[1]);
+                    $link = sprintf('%s/phim/%s', config('kkphim_crawler.domain', 'https://phimapi.com'), explode('phim/', $link)[1]);
                     $response = json_decode(file_get_contents($link), true);
                     $data->push(collect($response['movie'])->only('name', 'slug')->toArray());
                 } else {
@@ -34,7 +35,7 @@ class CrawlController extends CrudController
                             'page' => $i
                         ]), true);
                         if ($response['status']) {
-                            $data->push(...$response['movies']);
+                            $data->push(...$response['items']);
                         }
                     }
                 }
@@ -51,79 +52,30 @@ class CrawlController extends CrudController
         $categories = [];
         $regions = [];
         try {
-            Cache::forget('xxvn_categories');
-            Cache::forget('xxvn_regions');
-            $categories = Cache::remember('xxvn_categories', 86400, function () {
-                $data = json_decode('[
-                {
-                    "name": "Việt Nam Clip"
-                },
-                {
-                    "name": "AV Không che"
-                },
-                {
-                    "name": "Jav HD"
-                },
-                {
-                    "name": "XVIDEOS"
-                },
-                {
-                    "name": "Vụng trộm"
-                },
-                {
-                    "name": "Loạn luân"
-                },
-                {
-                    "name": "Phim sex Vietsub"
-                },
-                {
-                    "name": "Hiếp dâm"
-                },
-                {
-                    "name": "Hentai"
-                },
-                {
-                    "name": "PornHub"
-                }
-
-                ]', true) ?? [];
+            $categories = Cache::remember('kkphim_categories', 86400, function () {
+                $data = json_decode(file_get_contents(sprintf('%s/the-loai', config('kkphim_crawler.domain', 'https://phimapi.com'))), true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
 
-            $regions = Cache::remember('xxvn_regions', 86400, function () {
-                $data = json_decode('[
-                {
-                    "name": "Việt Nam"
-                },
-                {
-                    "name": "Nhật Bản"
-                },
-                {
-                    "name": "Châu Âu"
-                },
-                {
-                    "name": "Trung Quốc"
-                },
-                {
-                    "name": "Hàn Quốc"
-                }
-                ]', true) ?? [];
+            $regions = Cache::remember('kkphim_regions', 86400, function () {
+                $data = json_decode(file_get_contents(sprintf('%s/quoc-gia', config('kkphim_crawler.domain', 'https://phimapi.com'))), true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
         } catch (\Throwable $th) {
+
         }
 
         $fields = $this->movieUpdateOptions();
 
-        return view('khophim8k-crawler::crawl', compact('fields', 'regions', 'categories'));
+        return view('khophim8k-crawler::crawlkk', compact('fields', 'regions', 'categories'));
     }
 
     public function crawl(Request $request)
     {
-        $pattern = sprintf('%s/phim/{slug}', config('ophim_crawler.domain', 'https://xxvnapi.com/api'));
+        $pattern = sprintf('%s/phim/{slug}', config('kkphim_crawler.domain', 'https://phimapi.com'));
         try {
             $link = str_replace('{slug}', $request['slug'], $pattern);
-            $crawler = (new Crawler($link, request('fields', []), request('excludedCategories', []), request('excludedRegions', []), request('excludedType', []), request('forceUpdate', false)))->handle();
+            $crawler = (new Crawlerkk($link, request('fields', []), request('excludedCategories', []), request('excludedRegions', []), request('excludedType', []), request('forceUpdate', false)))->handle();
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage(), 'wait' => false], 500);
         }
@@ -167,8 +119,7 @@ class CrawlController extends CrudController
         ];
     }
 
-    public function getMoviesFromParams(Request $request)
-    {
+    public function getMoviesFromParams(Request $request) {
         $field = explode('-', request('params'))[0];
         $val = explode('-', request('params'))[1];
         if (!$val) {

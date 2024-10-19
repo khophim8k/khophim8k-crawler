@@ -1,12 +1,12 @@
 <?php
 
-namespace Kho8k\Crawler\OphimCrawler\Console;
+namespace Kho8k\Crawler\Kho8kCrawler\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
-use Kho8k\Crawler\OphimCrawler\Crawler;
-use Kho8k\Crawler\OphimCrawler\Option;
+use Kho8k\Crawler\Kho8kCrawler\Crawler;
+use Kho8k\Crawler\Kho8kCrawler\Option;
 
 class CrawlerScheduleCommand extends Command
 {
@@ -15,7 +15,7 @@ class CrawlerScheduleCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'ophim:plugins:khophim8k-crawler:schedule';
+    protected $signature = 'kho8k:plugins:khophim8k-crawler:schedule';
 
     /**
      * The console command description.

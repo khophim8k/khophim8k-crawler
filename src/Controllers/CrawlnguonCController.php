@@ -7,7 +7,7 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Kho8k\Crawler\Kho8kCrawler\Crawler;
+use Kho8k\Crawler\Kho8kCrawler\CrawlernguonC;
 use Kho8k\Core\Models\Movie;
 
 /**
@@ -15,17 +15,19 @@ use Kho8k\Core\Models\Movie;
  * @package Kho8k\Crawler\Kho8kCrawler\Controllers
  * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
  */
-class CrawlController extends CrudController
+class CrawlnguonCController extends CrudController
 {
+    // Fetch Nguonc
     public function fetch(Request $request)
     {
         try {
             $data = collect();
 
             $request['link'] = preg_split('/[\n\r]+/', $request['link']);
+
             foreach ($request['link'] as $link) {
                 if (preg_match('/(.*?)(\/phim\/)(.*?)/', $link)) {
-                    $link = sprintf('%s/phim/%s', 'https://xxvnapi.com/api', explode('phim/', $link)[1]);
+                    $link = sprintf('%s/api/film/%s', config('ophim_crawler.domain', 'https://phim.nguonc.com'), explode('phim/', $link)[1]);
                     $response = json_decode(file_get_contents($link), true);
                     $data->push(collect($response['movie'])->only('name', 'slug')->toArray());
                 } else {
@@ -34,7 +36,7 @@ class CrawlController extends CrudController
                             'page' => $i
                         ]), true);
                         if ($response['status']) {
-                            $data->push(...$response['movies']);
+                            $data->push(...$response['items']);
                         }
                     }
                 }
@@ -45,90 +47,164 @@ class CrawlController extends CrudController
             return response()->json(['message' => $e->getMessage()], 500);
         }
     }
+    // End Fetch Nguonc
 
+// ShowCrawPage Nguonc
     public function showCrawlPage(Request $request)
     {
         $categories = [];
         $regions = [];
         try {
-            Cache::forget('xxvn_categories');
-            Cache::forget('xxvn_regions');
-            $categories = Cache::remember('xxvn_categories', 86400, function () {
+            Cache::forget('ophim_categories');
+            Cache::forget('ophim_regions');
+            $categories = Cache::remember('ophim_categories', 86400, function () {
                 $data = json_decode('[
-                {
-                    "name": "Việt Nam Clip"
-                },
-                {
-                    "name": "AV Không che"
-                },
-                {
-                    "name": "Jav HD"
-                },
-                {
-                    "name": "XVIDEOS"
-                },
-                {
-                    "name": "Vụng trộm"
-                },
-                {
-                    "name": "Loạn luân"
-                },
-                {
-                    "name": "Phim sex Vietsub"
-                },
-                {
-                    "name": "Hiếp dâm"
-                },
-                {
-                    "name": "Hentai"
-                },
-                {
-                    "name": "PornHub"
-                }
-
-                ]', true) ?? [];
+    {
+        "name": "Hành Động"
+    },
+    {
+        "name": "Phiêu Lưu"
+    },
+    {
+        "name": "Hoạt Hình"
+    },
+    {
+        "name": "Hài"
+    },
+    {
+        "name": "Hình Sự"
+    },
+    {
+        "name": "Tài Liệu"
+    },
+    {
+        "name": "Chính Kịch"
+    },
+    {
+        "name": "Gia Đình"
+    },
+    {
+        "name": "Giả Tưởng"
+    },
+    {
+        "name": "Lịch Sử"
+    },
+    {
+        "name": "Kinh Dị"
+    },
+    {
+        "name": "Nhạc"
+    },
+    {
+        "name": "Bí Ẩn"
+    },
+    {
+        "name": "Lãng Mạn"
+    },
+    {
+        "name": "Khoa Học Viễn Tưởng"
+    },
+    {
+        "name": "Gây Cấn"
+    },
+    {
+        "name": "Chiến Tranh"
+    },
+    {
+        "name": "Tâm Lý"
+    },
+    {
+        "name": "Tình Cảm"
+    },
+    {
+        "name": "Cổ Trang"
+    },
+    {
+        "name": "Miền Tây"
+    },
+    {
+        "name": "Phim 18+"
+    }
+]', true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
 
-            $regions = Cache::remember('xxvn_regions', 86400, function () {
+            $regions = Cache::remember('ophim_regions', 86400, function () {
                 $data = json_decode('[
-                {
-                    "name": "Việt Nam"
-                },
-                {
-                    "name": "Nhật Bản"
-                },
-                {
-                    "name": "Châu Âu"
-                },
-                {
-                    "name": "Trung Quốc"
-                },
-                {
-                    "name": "Hàn Quốc"
-                }
-                ]', true) ?? [];
+    {
+        "name": "Âu Mỹ"
+    },
+    {
+        "name": "Anh"
+    },
+    {
+        "name": "Trung Quốc"
+    },
+    {
+        "name": "Indonesia"
+    },
+    {
+        "name": "Việt Nam"
+    },
+    {
+        "name": "Pháp"
+    },
+    {
+        "name": "Hồng Kông"
+    },
+    {
+        "name": "Hàn Quốc"
+    },
+    {
+        "name": "Nhật Bản"
+    },
+    {
+        "name": "Thái Lan"
+    },
+    {
+        "name": "Đài Loan"
+    },
+    {
+        "name": "Nga"
+    },
+    {
+        "name": "Hà Lan"
+    },
+    {
+        "name": "Philippines"
+    },
+    {
+        "name": "Ấn Độ"
+    }
+]', true) ?? [];
                 return collect($data)->pluck('name', 'name')->toArray();
             });
         } catch (\Throwable $th) {
+
         }
 
         $fields = $this->movieUpdateOptions();
 
-        return view('khophim8k-crawler::crawl', compact('fields', 'regions', 'categories'));
+        return view('khophim8k-crawler::crawlc', compact('fields', 'regions', 'categories'));
     }
+// End ShowCrawlPage Nguonc
 
+
+
+    // Crawl Nguonc
     public function crawl(Request $request)
     {
-        $pattern = sprintf('%s/phim/{slug}', config('ophim_crawler.domain', 'https://xxvnapi.com/api'));
+        $pattern = sprintf('%s/api/film/{slug}', config('ophim_crawler.domain', 'https://phim.nguonc.com'));
         try {
             $link = str_replace('{slug}', $request['slug'], $pattern);
-            $crawler = (new Crawler($link, request('fields', []), request('excludedCategories', []), request('excludedRegions', []), request('excludedType', []), request('forceUpdate', false)))->handle();
+            $crawler = (new CrawlernguonC($link, request('fields', []), request('excludedCategories', []), request('excludedRegions', []), request('excludedType', []), request('forceUpdate', false)))->handle();
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage(), 'wait' => false], 500);
         }
         return response()->json(['message' => 'OK', 'wait' => $crawler ?? true]);
     }
+    // End Crawl Nguonc
+
 
     protected function movieUpdateOptions(): array
     {
@@ -167,8 +243,7 @@ class CrawlController extends CrudController
         ];
     }
 
-    public function getMoviesFromParams(Request $request)
-    {
+    public function getMoviesFromParams(Request $request) {
         $field = explode('-', request('params'))[0];
         $val = explode('-', request('params'))[1];
         if (!$val) {
